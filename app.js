@@ -67,7 +67,7 @@ intents.matches('Weather.GetCondition', builder.DialogAction.send('Inside LUIS I
 
 intents.matches('Weather.GetForecast',[
     function (session, args, next) {
-        builder.DialogAction.send('username is ' + session.message.user.name);
+        session.send('username is ' + session.message.user.name);
     }
 ]);
 

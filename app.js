@@ -85,7 +85,7 @@ intents.onDefault([
 //=========================================================
  
 // Replace this functions with custom login/verification for agents
-var isAgent = function (session) { return session.message.user.name.startsWith("agent"); };
+var isAgent = function (session) { return session.message.user.name.startsWith("mrdwright"); };
 
 /**
    bot: builder.UniversalBot

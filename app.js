@@ -1,34 +1,18 @@
 "use strict";
-/*-----------------------------------------------------------------------------
-A simple echo bot for the Microsoft Bot Framework. 
------------------------------------------------------------------------------*/
+
 var express = require("express");
-//var restify = require('restify');
+var request = require('request');
 var builder = require('botbuilder');
 var cognitiveservices = require('botbuilder-cognitiveservices');
 var handoff = require("botbuilder-handoff");
-//=========================================================
-// Normal Bot Setup
-//=========================================================
-// Setup Express Server (N.B: If you are already using restify for your bot, you will need replace it with an express server)
+
+var weatherEndPoint = 'https://query.yahooapis.com/v1/public/yql?q=select%20item.condition%20from%20weather.forecast%20where%20woeid%20in%20(select%20woeid%20from%20geo.places(1)%20where%20text=%27Vancouver%27)%20and%20u=%27c%27&format=json';    
 var app = express();
-// Setup Express Server
+
 app.listen(process.env.port || process.env.PORT || 3978, '::', function () {
     console.log('Server Up');
 });
 
-
-
-
-// Setup Restify Server
-// var server = restify.createServer();
-// server.listen(process.env.port || process.env.PORT || 3978, function () {
-//    console.log('%s listening to %s', server.name, server.url); 
-// });
-
-// For Emulator to work
-
-// Create chat connector for communicating with the Bot Framework Service
 var connector = new builder.ChatConnector({
     appId: process.env.MicrosoftAppId,
     appPassword: process.env.MicrosoftAppPassword
@@ -44,24 +28,25 @@ model += '?subscription-key=' + process.env.LuisSubKey + '&verbose=true&timezone
 
 var recognizer = new builder.LuisRecognizer(model);
 
-// Listen for messages from users 
-//server.post('/api/messages', connector.listen());
 app.post('/api/messages', connector.listen());
-
 
 //=========================================================
 // Handoff Setup
 //=========================================================
  
-// Replace this functions with custom login/verification for agents
-
-var isAgent = function (session) { 
-    return session.message.user.name.startsWith("mrdwright"); };
+var isAgent = function (session) { return session.message.user.name.startsWith("agent"); };
 /**
    bot: builder.UniversalBot
    app: express ( e.g. const app = express(); )
    isAgent: function to determine when agent is talking to the bot
-   options: { }     
+   options: { 
+        mongodbProvider: process.env.MONGODB_PROVIDER,
+        directlineSecret: process.env.MICROSOFT_DIRECTLINE_SECRET,
+        textAnalyticsKey: process.env.CG_SENTIMENT_KEY,
+        appInsightsInstrumentationKey: process.env.APPINSIGHTS_INSTRUMENTATIONKEY,
+        retainData: process.env.RETAIN_DATA,
+        customerStartHandoffCommand: process.env.CUSTOMER_START_HANDOFF_COMMAND
+   }     
 **/
 handoff.setup(bot, app, isAgent, {
    mongodbProvider: process.env.MONGODB_PROVIDER,
@@ -70,50 +55,41 @@ handoff.setup(bot, app, isAgent, {
    customerStartHandoffCommand: "human"
 });
 
-/*----------------------------------------------------------------------------------------
-* Bot Storage: This is a great spot to register the private state storage for your bot. 
-* We provide adapters for Azure Table, CosmosDb, SQL Azure, or you can implement your own!
-* For samples and documentation, see: https://github.com/Microsoft/BotBuilder-Azure
-* ---------------------------------------------------------------------------------------- */
-
-// Create your bot with a function to receive messages from the user
-var bot = new builder.UniversalBot(connector,[
-    function (session, args, next) {
-        var agent = session.message.user.name.startsWith("mrdwright");
-        session.endConversation('Echo ' + session.message.text + ' ' + agent);
-    }
-]);
+var bot = new builder.UniversalBot(connector);
 
 var intents = new builder.IntentDialog({ recognizers: [recognizer, qnarecognizer] });
-//bot.dialog('/', intents);
-//triggerHandoff manually
-bot.dialog('/connectToHuman', function (session) {    
-    session.send("Hold on, buddy! Connecting you to the next available agent!");
+bot.dialog('/', intents);
+
+bot.dialog('/connectToHuman', function (session) {        
     handoff.triggerHandoff(session);
 }).triggerAction({
     matches: /^agent/i
 });
 
-// intents.matches('Weather.GetCondition', builder.DialogAction.send('Inside LUIS Intent 1.'));
+intents.matches('Weather.GetCondition', builder.DialogAction.send('Inside LUIS Intent 1.'));
 
-// intents.matches('Weather.GetForecast',[
-//     function (session, args, next) {
-//         isAgent;
-//         session.send('username is ' + session.message.user.name);
-//     }
-// ]);
+intents.matches('Weather.GetForecast', [
+    function (session, args, next) {
+        request.get({
+            url : weatherEndPoint
+        }, function (error, response, body) {
+            var json = JSON.parse(body);
+            session.send("It's " + json.query.results.channel.item.condition.temp + " °C and " + json.query.results.channel.item.condition.text );
+        });      
+    }
+]);
 
-// intents.matches('qna', [
-//     function (session, args, next) {
-//         var answerEntity = builder.EntityRecognizer.findEntity(args.entities, 'answer');
-//         session.send(answerEntity.entity);
-//     }
-// ]);
+intents.matches('qna', [
+    function (session, args, next) {
+        var answerEntity = builder.EntityRecognizer.findEntity(args.entities, 'answer');
+        session.send(answerEntity.entity);
+    }
+]);
 
-// intents.onDefault([
-//     function(session){
-//         session.send('Sorry!! No match!!');
-// 	}
-// ]);
+intents.onDefault([
+    function(session){
+        session.send('Sorry!! No match!!');
+	}
+]);
 
 

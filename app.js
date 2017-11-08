@@ -4,8 +4,9 @@ var express = require("express");
 var request = require('request');
 var builder = require('botbuilder');
 var cognitiveservices = require('botbuilder-cognitiveservices');
-var handoff = require("botbuilder-handoff");
-
+//var handoff = require("botbuilder-handoff");
+var handoff_1 = require("./handoff");
+var commands_1 = require("./commands");
 var weatherEndPoint = 'https://query.yahooapis.com/v1/public/yql?q=select%20item.condition%20from%20weather.forecast%20where%20woeid%20in%20(select%20woeid%20from%20geo.places(1)%20where%20text=%27Vancouver%27)%20and%20u=%27c%27&format=json';    
 var app = express();
 
@@ -34,26 +35,26 @@ app.post('/api/messages', connector.listen());
 // Handoff Setup
 //=========================================================
  
-var isAgent = function (session) { return session.message.user.name.startsWith("agent"); };
-/**
-   bot: builder.UniversalBot
-   app: express ( e.g. const app = express(); )
-   isAgent: function to determine when agent is talking to the bot
-   options: { 
-        mongodbProvider: process.env.MONGODB_PROVIDER,
-        directlineSecret: process.env.MICROSOFT_DIRECTLINE_SECRET,
-        textAnalyticsKey: process.env.CG_SENTIMENT_KEY,
-        appInsightsInstrumentationKey: process.env.APPINSIGHTS_INSTRUMENTATIONKEY,
-        retainData: process.env.RETAIN_DATA,
-        customerStartHandoffCommand: process.env.CUSTOMER_START_HANDOFF_COMMAND
-   }     
-**/
-handoff.setup(bot, app, isAgent, {
-   mongodbProvider: process.env.MONGODB_PROVIDER,
-   directlineSecret: process.env.MICROSOFT_DIRECTLINE_SECRET,
-   retainData: "true",
-   customerStartHandoffCommand: "human"
-});
+// var isAgent = function (session) { return session.message.user.name.startsWith("agent"); };
+// /**
+//    bot: builder.UniversalBot
+//    app: express ( e.g. const app = express(); )
+//    isAgent: function to determine when agent is talking to the bot
+//    options: { 
+//         mongodbProvider: process.env.MONGODB_PROVIDER,
+//         directlineSecret: process.env.MICROSOFT_DIRECTLINE_SECRET,
+//         textAnalyticsKey: process.env.CG_SENTIMENT_KEY,
+//         appInsightsInstrumentationKey: process.env.APPINSIGHTS_INSTRUMENTATIONKEY,
+//         retainData: process.env.RETAIN_DATA,
+//         customerStartHandoffCommand: process.env.CUSTOMER_START_HANDOFF_COMMAND
+//    }     
+// **/
+// handoff.setup(bot, app, isAgent, {
+//    mongodbProvider: process.env.MONGODB_PROVIDER,
+//    directlineSecret: process.env.MICROSOFT_DIRECTLINE_SECRET,
+//    retainData: "true",
+//    customerStartHandoffCommand: "human"
+// });
 
 var bot = new builder.UniversalBot(connector);
 
@@ -91,5 +92,12 @@ intents.onDefault([
         session.send('Sorry!! No match!!');
 	}
 ]);
+
+const isAgent = (session) => session.message.user.name.startsWith("Agent");
+const handoff = new handoff_1.Handoff(bot, isAgent);
+//========================================================
+// Bot Middleware
+//========================================================
+bot.use(commands_1.commandsMiddleware(handoff), handoff.routingMiddleware());
 
 

@@ -65,7 +65,11 @@ bot.dialog('/', intents);
 
 intents.matches('Weather.GetCondition', builder.DialogAction.send('Inside LUIS Intent 1.'));
 
-intents.matches('Weather.GetForecast', builder.DialogAction.send('Inside LUIS Intent 2.'));
+intents.matches('Weather.GetForecast',[
+    function (session, args, next) {
+        builder.DialogAction.send('username is ' + session.message.user.name);
+    }
+]);
 
 intents.matches('qna', [
     function (session, args, next) {
@@ -97,15 +101,14 @@ handoff.setup(bot, app, isAgent, {
    mongodbProvider: process.env.MONGODB_PROVIDER,
    directlineSecret: process.env.MICROSOFT_DIRECTLINE_SECRET,
    textAnalyticsKey: process.env.CG_SENTIMENT_KEY,
-   appInsightsInstrumentationKey: process.env.APPINSIGHTS_INSTRUMENTATIONKEY,
-   retainData: process.env.RETAIN_DATA,
-   customerStartHandoffCommand: process.env.CUSTOMER_START_HANDOFF_COMMAND
+   retainData: "true",
+   customerStartHandoffCommand: "human"
 });
 
 //triggerHandoff manually
-bot.dialog('/connectToHuman', function (session) {
-    session.send("Hold on, buddy! Connecting you to the next available agent!");
-    handoff.triggerHandoff(session);
-}).triggerAction({
-    matches: /^agent/i
-});
+// bot.dialog('/connectToHuman', function (session) {
+//     session.send("Hold on, buddy! Connecting you to the next available agent!");
+//     handoff.triggerHandoff(session);
+// }).triggerAction({
+//     matches: /^agent/i
+// });

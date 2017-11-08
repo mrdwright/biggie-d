@@ -79,7 +79,8 @@ handoff.setup(bot, app, isAgent, {
 // Create your bot with a function to receive messages from the user
 var bot = new builder.UniversalBot(connector,[
     function (session, args, next) {
-        session.endConversation('Echo ' + session.message.text);
+        var agent = session.message.user.name.startsWith("mrdwright");
+        session.endConversation('Echo ' + session.message.text + ' ' + agent);
     }
 ]);
 

@@ -1,3 +1,4 @@
+"use strict";
 /*-----------------------------------------------------------------------------
 A simple echo bot for the Microsoft Bot Framework. 
 -----------------------------------------------------------------------------*/
@@ -26,16 +27,11 @@ app.listen(process.env.port || process.env.PORT || 3978, '::', function () {
 // });
 
 // For Emulator to work
-// process.env.MicrosoftAppId = '';
-// process.env.MicrosoftAppPassword = '';
-process.env.MongoDb
 
 // Create chat connector for communicating with the Bot Framework Service
 var connector = new builder.ChatConnector({
     appId: process.env.MicrosoftAppId,
-    appPassword: process.env.MicrosoftAppPassword,
-    stateEndpoint: process.env.BotStateEndpoint,
-    openIdMetadata: process.env.BotOpenIdMetadata 
+    appPassword: process.env.MicrosoftAppPassword
 });
 
 var qnarecognizer = new cognitiveservices.QnAMakerRecognizer({
@@ -45,52 +41,22 @@ var qnarecognizer = new cognitiveservices.QnAMakerRecognizer({
 
 var model = 'https://westus.api.cognitive.microsoft.com/luis/v2.0/apps/' + process.env.LuisAppId;
 model += '?subscription-key=' + process.env.LuisSubKey + '&verbose=true&timezoneOffset=0&q=';
+
 var recognizer = new builder.LuisRecognizer(model);
 
 // Listen for messages from users 
 //server.post('/api/messages', connector.listen());
 app.post('/api/messages', connector.listen());
 
-/*----------------------------------------------------------------------------------------
-* Bot Storage: This is a great spot to register the private state storage for your bot. 
-* We provide adapters for Azure Table, CosmosDb, SQL Azure, or you can implement your own!
-* For samples and documentation, see: https://github.com/Microsoft/BotBuilder-Azure
-* ---------------------------------------------------------------------------------------- */
-
-// Create your bot with a function to receive messages from the user
-var bot = new builder.UniversalBot(connector);
-
-var intents = new builder.IntentDialog({ recognizers: [recognizer, qnarecognizer] });
-bot.dialog('/', intents);
-
-intents.matches('Weather.GetCondition', builder.DialogAction.send('Inside LUIS Intent 1.'));
-
-intents.matches('Weather.GetForecast',[
-    function (session, args, next) {
-        session.send('username is ' + session.message.user.name);
-    }
-]);
-
-intents.matches('qna', [
-    function (session, args, next) {
-        var answerEntity = builder.EntityRecognizer.findEntity(args.entities, 'answer');
-        session.send(answerEntity.entity);
-    }
-]);
-
-intents.onDefault([
-    function(session){
-        session.send('Sorry!! No match!!');
-	}
-]);
 
 //=========================================================
 // Handoff Setup
 //=========================================================
  
 // Replace this functions with custom login/verification for agents
-var isAgent = function (session) { return session.message.user.name.startsWith("mrdwright"); };
 
+var isAgent = function (session) { 
+    return session.message.user.name.startsWith("mrdwright"); };
 /**
    bot: builder.UniversalBot
    app: express ( e.g. const app = express(); )
@@ -100,15 +66,53 @@ var isAgent = function (session) { return session.message.user.name.startsWith("
 handoff.setup(bot, app, isAgent, {
    mongodbProvider: process.env.MONGODB_PROVIDER,
    directlineSecret: process.env.MICROSOFT_DIRECTLINE_SECRET,
-   textAnalyticsKey: process.env.CG_SENTIMENT_KEY,
    retainData: "true",
    customerStartHandoffCommand: "human"
 });
 
+/*----------------------------------------------------------------------------------------
+* Bot Storage: This is a great spot to register the private state storage for your bot. 
+* We provide adapters for Azure Table, CosmosDb, SQL Azure, or you can implement your own!
+* For samples and documentation, see: https://github.com/Microsoft/BotBuilder-Azure
+* ---------------------------------------------------------------------------------------- */
+
+// Create your bot with a function to receive messages from the user
+var bot = new builder.UniversalBot(connector,[
+    function (session, args, next) {
+        session.endConversation('Echo ' + session.message.text);
+    }
+]);
+
+var intents = new builder.IntentDialog({ recognizers: [recognizer, qnarecognizer] });
+//bot.dialog('/', intents);
 //triggerHandoff manually
-// bot.dialog('/connectToHuman', function (session) {
-//     session.send("Hold on, buddy! Connecting you to the next available agent!");
-//     handoff.triggerHandoff(session);
-// }).triggerAction({
-//     matches: /^agent/i
-// });
+bot.dialog('/connectToHuman', function (session) {    
+    session.send("Hold on, buddy! Connecting you to the next available agent!");
+    handoff.triggerHandoff(session);
+}).triggerAction({
+    matches: /^agent/i
+});
+
+// intents.matches('Weather.GetCondition', builder.DialogAction.send('Inside LUIS Intent 1.'));
+
+// intents.matches('Weather.GetForecast',[
+//     function (session, args, next) {
+//         isAgent;
+//         session.send('username is ' + session.message.user.name);
+//     }
+// ]);
+
+// intents.matches('qna', [
+//     function (session, args, next) {
+//         var answerEntity = builder.EntityRecognizer.findEntity(args.entities, 'answer');
+//         session.send(answerEntity.entity);
+//     }
+// ]);
+
+// intents.onDefault([
+//     function(session){
+//         session.send('Sorry!! No match!!');
+// 	}
+// ]);
+
+

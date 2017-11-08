@@ -12,7 +12,9 @@
   "dependencies": {
     "botbuilder": "^3.8.4",
     "botbuilder-cognitiveservices": "^1.1.0",
+    "botbuilder-handoff": "^0.2.0",
     "eslint": "^4.10.0",
+    "express": "^4.16.2",
     "restify": "^5.0.0"
   },
   "devDependencies": {

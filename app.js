@@ -19,6 +19,8 @@ var connector = new builder.ChatConnector({
     appPassword: process.env.MICROSOFT_APP_PASSWORD
 });
 
+var instructions = 'Welcome! you can ask about holy water, the weather, or a dentist';
+
 var bot = new builder.UniversalBot(connector);
 
 app.post('/api/messages', connector.listen());
@@ -53,7 +55,7 @@ var luisrecognizer = new builder.LuisRecognizer('https://westus.api.cognitive.mi
 //   }     
 // )
 //=========================================================
-// const isAgent = (session) => session.message.user.name.startsWith("agent");
+const isAgent = (session) => session.message.user.name.startsWith("agent");
 
 // handoff.setup(bot, app, isAgent, {
 //     mongodbProvider: process.env.MONGODB_PROVIDER,
@@ -103,3 +105,23 @@ bot.dialog('/', intents);
 // }).triggerAction({
 //     matches: /^agent/i
 // });
+
+bot.on('conversationUpdate', function (activity) {
+    // when user joins conversation, send instructions
+    if (activity.membersAdded) {
+        activity.membersAdded.forEach(function (identity) {
+            if (identity.id === activity.address.bot.id) {
+                var reply = new builder.Message()
+                .address(activity.address)
+                if(isAgent){
+                    reply
+                    .text('you are an agent!');                    
+                }else{
+                    reply
+                    .text(instructions);                    
+                }
+                bot.send(reply);
+            }
+        });
+    }
+});
